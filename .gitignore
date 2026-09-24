@@ -1,0 +1,17 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+
+## EF Core
+**/Migrations/*.Designer.cs.bak
+
+## Docker / env
+.env
+*.env.local
+
+## OS
+.DS_Store
+Thumbs.db
