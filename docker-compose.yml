@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:16
+    container_name: tienda-poniq-db
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "5432:5432"
+    volumes:
+      - poniq_pgdata:/var/lib/postgresql/data
+
+volumes:
+  poniq_pgdata:
