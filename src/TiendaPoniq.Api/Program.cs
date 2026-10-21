@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using TiendaPoniq.Application.Interfaces;
 using TiendaPoniq.Infrastructure.Persistence;
+using TiendaPoniq.Infrastructure.Persistence.Seed;
 using TiendaPoniq.Infrastructure.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,6 +17,14 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+
+// Aplicar migraciones pendientes y sembrar el catálogo en desarrollo
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    await context.Database.MigrateAsync();
+    await DbInitializer.SeedAsync(context);
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
