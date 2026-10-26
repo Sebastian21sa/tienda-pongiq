@@ -10,7 +10,6 @@ namespace TiendaPoniq.Domain.Entities
         public decimal Total { get; set; }
 
         public string UsuarioId { get; set; } = string.Empty;
-        public Usuario Usuario { get; set; } = null!;
 
         public ICollection<ItemPedido> Items { get; set; } = new List<ItemPedido>();
     }

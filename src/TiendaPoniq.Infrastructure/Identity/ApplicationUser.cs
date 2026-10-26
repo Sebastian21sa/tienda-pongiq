@@ -1,12 +1,11 @@
-namespace TiendaPoniq.Domain.Entities
+﻿using Microsoft.AspNetCore.Identity;
+
+namespace TiendaPoniq.Infrastructure.Identity
 {
-    public class Usuario
+    public class ApplicationUser : IdentityUser
     {
-        public string Id { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
         public string Apellido { get; set; } = string.Empty;
         public DateTime FechaRegistro { get; set; } = DateTime.UtcNow;
-
-        public ICollection<Pedido> Pedidos { get; set; } = new List<Pedido>();
     }
 }

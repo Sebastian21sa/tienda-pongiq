@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TiendaPoniq.Domain.Entities;
+using Microsoft.AspNetCore.Identity;
 
 namespace TiendaPoniq.Infrastructure.Persistence.Seed
 {
@@ -443,6 +444,18 @@ namespace TiendaPoniq.Infrastructure.Persistence.Seed
 
             await context.Productos.AddRangeAsync(productos);
             await context.SaveChangesAsync();
+        }
+        public static async Task SeedRolesAsync(RoleManager<IdentityRole> roleManager)
+        {
+            string[] roles = { "Admin", "Cliente" };
+
+            foreach (var role in roles)
+            {
+                if (!await roleManager.RoleExistsAsync(role))
+                {
+                    await roleManager.CreateAsync(new IdentityRole(role));
+                }
+            }
         }
     }
 }
