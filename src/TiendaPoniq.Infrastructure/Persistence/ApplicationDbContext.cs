@@ -18,5 +18,6 @@ namespace TiendaPoniq.Infrastructure.Persistence
         public DbSet<VarianteProducto> VariantesProducto => Set<VarianteProducto>();
         public DbSet<Pedido> Pedidos => Set<Pedido>();
         public DbSet<ItemPedido> ItemsPedido => Set<ItemPedido>();
+        public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
     }
 }

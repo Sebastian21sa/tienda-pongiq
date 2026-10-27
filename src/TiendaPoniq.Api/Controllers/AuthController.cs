@@ -1,8 +1,11 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using TiendaPoniq.Application.DTOs;
 using TiendaPoniq.Application.Interfaces;
 using TiendaPoniq.Infrastructure.Identity;
+using TiendaPoniq.Infrastructure.Persistence;
 
 namespace TiendaPoniq.Api.Controllers
 {
@@ -12,11 +15,15 @@ namespace TiendaPoniq.Api.Controllers
     {
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly ITokenService _tokenService;
+        private readonly ApplicationDbContext _context;
 
-        public AuthController(UserManager<ApplicationUser> userManager, ITokenService tokenService)
+        private const int DiasExpiracionRefreshToken = 7;
+
+        public AuthController(UserManager<ApplicationUser> userManager, ITokenService tokenService, ApplicationDbContext context)
         {
             _userManager = userManager;
             _tokenService = tokenService;
+            _context = context;
         }
 
         [HttpPost("register")]
@@ -47,16 +54,8 @@ namespace TiendaPoniq.Api.Controllers
 
             await _userManager.AddToRoleAsync(nuevoUsuario, "Cliente");
 
-            var roles = await _userManager.GetRolesAsync(nuevoUsuario);
-            var (token, expiracion) = _tokenService.GenerarToken(nuevoUsuario.Id, nuevoUsuario.Email!, roles);
-
-            return Ok(new AuthResponseDto
-            {
-                Token = token,
-                Expiracion = expiracion,
-                Email = nuevoUsuario.Email!,
-                Nombre = nuevoUsuario.Nombre
-            });
+            var respuesta = await GenerarRespuestaAutenticacionAsync(nuevoUsuario);
+            return Ok(respuesta);
         }
 
         [HttpPost("login")]
@@ -74,16 +73,72 @@ namespace TiendaPoniq.Api.Controllers
                 return Unauthorized("Correo o contraseña incorrectos.");
             }
 
-            var roles = await _userManager.GetRolesAsync(usuario);
-            var (token, expiracion) = _tokenService.GenerarToken(usuario.Id, usuario.Email!, roles);
+            var respuesta = await GenerarRespuestaAutenticacionAsync(usuario);
+            return Ok(respuesta);
+        }
 
-            return Ok(new AuthResponseDto
+        [HttpPost("refresh-token")]
+        public async Task<ActionResult<AuthResponseDto>> RefreshToken(RefreshTokenRequestDto dto)
+        {
+            var tokenGuardado = await _context.RefreshTokens
+                .Include(rt => rt.ApplicationUser)
+                .FirstOrDefaultAsync(rt => rt.Token == dto.RefreshToken);
+
+            if (tokenGuardado == null || tokenGuardado.Revocado || tokenGuardado.FechaExpiracion < DateTime.UtcNow)
             {
-                Token = token,
+                return Unauthorized("Refresh token inválido o expirado.");
+            }
+
+            // Rotación: revocamos el token usado y emitimos uno nuevo
+            tokenGuardado.Revocado = true;
+
+            var respuesta = await GenerarRespuestaAutenticacionAsync(tokenGuardado.ApplicationUser);
+            return Ok(respuesta);
+        }
+
+        [Authorize]
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout(RefreshTokenRequestDto dto)
+        {
+            var tokenGuardado = await _context.RefreshTokens
+                .FirstOrDefaultAsync(rt => rt.Token == dto.RefreshToken);
+
+            if (tokenGuardado == null)
+            {
+                return NotFound("Refresh token no encontrado.");
+            }
+
+            tokenGuardado.Revocado = true;
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+
+        private async Task<AuthResponseDto> GenerarRespuestaAutenticacionAsync(ApplicationUser usuario)
+        {
+            var roles = await _userManager.GetRolesAsync(usuario);
+            var (accessToken, expiracion) = _tokenService.GenerarToken(usuario.Id, usuario.Email!, roles);
+            var refreshToken = _tokenService.GenerarRefreshToken();
+
+            _context.RefreshTokens.Add(new RefreshToken
+            {
+                Token = refreshToken,
+                ApplicationUserId = usuario.Id,
+                FechaCreacion = DateTime.UtcNow,
+                FechaExpiracion = DateTime.UtcNow.AddDays(DiasExpiracionRefreshToken),
+                Revocado = false
+            });
+
+            await _context.SaveChangesAsync();
+
+            return new AuthResponseDto
+            {
+                Token = accessToken,
                 Expiracion = expiracion,
+                RefreshToken = refreshToken,
                 Email = usuario.Email!,
                 Nombre = usuario.Nombre
-            });
+            };
         }
     }
 }
