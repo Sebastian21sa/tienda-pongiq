@@ -1,0 +1,8 @@
+﻿namespace TiendaPoniq.Application.DTOs
+{
+    public class CategoriaCreateDto
+    {
+        public string Nombre { get; set; } = string.Empty;
+        public string? Descripcion { get; set; }
+    }
+}

@@ -1,6 +1,8 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using TiendaPoniq.Domain.Entities;
 using Microsoft.AspNetCore.Identity;
+using TiendaPoniq.Infrastructure.Identity;
+
 
 namespace TiendaPoniq.Infrastructure.Persistence.Seed
 {
@@ -455,6 +457,34 @@ namespace TiendaPoniq.Infrastructure.Persistence.Seed
                 {
                     await roleManager.CreateAsync(new IdentityRole(role));
                 }
+            }
+        }
+        public static async Task SeedAdminUserAsync(UserManager<ApplicationUser> userManager)
+        {
+            const string adminEmail = "admin@tiendaponiq.com";
+            const string adminPassword = "Admin12345";
+
+            var adminExistente = await userManager.FindByEmailAsync(adminEmail);
+            if (adminExistente != null)
+            {
+                return;
+            }
+
+            var admin = new ApplicationUser
+            {
+                UserName = adminEmail,
+                Email = adminEmail,
+                Nombre = "Admin",
+                Apellido = "TiendaPoniq",
+                FechaRegistro = DateTime.UtcNow,
+                EmailConfirmed = true
+            };
+
+            var resultado = await userManager.CreateAsync(admin, adminPassword);
+
+            if (resultado.Succeeded)
+            {
+                await userManager.AddToRoleAsync(admin, "Admin");
             }
         }
     }
