@@ -31,6 +31,34 @@ namespace TiendaPoniq.Infrastructure.Repositories
             return await _dbSet.Where(predicate).ToListAsync();
         }
 
+        public async Task<(IReadOnlyList<T> Items, int TotalCount)> GetPagedAsync(
+            Expression<Func<T, bool>>? predicate,
+            int pageNumber,
+            int pageSize,
+            Func<IQueryable<T>, IQueryable<T>>? include = null)
+        {
+            IQueryable<T> query = _dbSet;
+
+            if (include != null)
+            {
+                query = include(query);
+            }
+
+            if (predicate != null)
+            {
+                query = query.Where(predicate);
+            }
+
+            var totalCount = await query.CountAsync();
+
+            var items = await query
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            return (items, totalCount);
+        }
+
         public async Task AddAsync(T entity)
         {
             await _dbSet.AddAsync(entity);
