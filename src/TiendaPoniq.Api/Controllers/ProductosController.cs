@@ -9,6 +9,7 @@ namespace TiendaPoniq.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    //[Authorize] // Requiere autenticación para todos los métodos del controlador
     public class ProductosController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -19,6 +20,7 @@ namespace TiendaPoniq.Api.Controllers
         }
 
         [HttpGet]
+        // GET: api/Productos 
         public async Task<ActionResult<PagedResultDto<ProductoDto>>> GetAll(
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
@@ -59,6 +61,7 @@ namespace TiendaPoniq.Api.Controllers
         }
 
         [HttpGet("{id}")]
+        // GET: api/Productos/5
         public async Task<ActionResult<ProductoDto>> GetById(int id)
         {
             var producto = await _unitOfWork.Productos.GetByIdAsync(id);
@@ -86,6 +89,7 @@ namespace TiendaPoniq.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpPost]
+        // POST: api/Productos
         public async Task<ActionResult<ProductoDto>> Create(ProductoCreateDto dto)
         {
             var producto = new Producto
@@ -117,6 +121,7 @@ namespace TiendaPoniq.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
+        // PUT: api/Productos/5
         public async Task<IActionResult> Update(int id, ProductoCreateDto dto)
         {
             var producto = await _unitOfWork.Productos.GetByIdAsync(id);
@@ -139,6 +144,7 @@ namespace TiendaPoniq.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
+        // DELETE: api/Productos/5
         public async Task<IActionResult> Delete(int id)
         {
             var producto = await _unitOfWork.Productos.GetByIdAsync(id);
