@@ -9,7 +9,6 @@ namespace TiendaPoniq.Api.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    //[Authorize] // Requiere autenticación para todos los métodos del controlador
     public class ProductosController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
@@ -20,12 +19,15 @@ namespace TiendaPoniq.Api.Controllers
         }
 
         [HttpGet]
-        // GET: api/Productos 
+
         public async Task<ActionResult<PagedResultDto<ProductoDto>>> GetAll(
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
             [FromQuery] int? categoriaId = null,
-            [FromQuery] int? marcaId = null)
+            [FromQuery] int? marcaId = null,
+            [FromQuery] string? busqueda = null,
+            [FromQuery] decimal? precioMin = null,
+            [FromQuery] decimal? precioMax = null)
         {
             if (pageNumber < 1) pageNumber = 1;
             if (pageSize < 1 || pageSize > 100) pageSize = 10;
@@ -34,6 +36,13 @@ namespace TiendaPoniq.Api.Controllers
                 predicate: p =>
                     (!categoriaId.HasValue || p.CategoriaId == categoriaId.Value) &&
                     (!marcaId.HasValue || p.MarcaId == marcaId.Value) &&
+                    (string.IsNullOrEmpty(busqueda) ||
+                        p.Nombre.ToLower().Contains(busqueda.ToLower()) ||
+                        p.Descripcion.ToLower().Contains(busqueda.ToLower())) &&
+                    ((!precioMin.HasValue && !precioMax.HasValue) ||
+                        p.Variantes.Any(v =>
+                            (!precioMin.HasValue || v.Precio >= precioMin.Value) &&
+                            (!precioMax.HasValue || v.Precio <= precioMax.Value))) &&
                     p.Activo,
                 pageNumber: pageNumber,
                 pageSize: pageSize,
@@ -61,7 +70,6 @@ namespace TiendaPoniq.Api.Controllers
         }
 
         [HttpGet("{id}")]
-        // GET: api/Productos/5
         public async Task<ActionResult<ProductoDto>> GetById(int id)
         {
             var producto = await _unitOfWork.Productos.GetByIdAsync(id);
@@ -87,9 +95,46 @@ namespace TiendaPoniq.Api.Controllers
             });
         }
 
+        [HttpGet("{id}/detalle")]
+        public async Task<ActionResult<ProductoDetalleDto>> GetDetalle(int id)
+        {
+            var producto = await _unitOfWork.Productos.GetFirstOrDefaultAsync(
+                p => p.Id == id,
+                include: query => query
+                    .Include(p => p.Categoria)
+                    .Include(p => p.Marca)
+                    .Include(p => p.Variantes));
+
+            if (producto == null)
+            {
+                return NotFound();
+            }
+
+            var resultado = new ProductoDetalleDto
+            {
+                Id = producto.Id,
+                Nombre = producto.Nombre,
+                Descripcion = producto.Descripcion,
+                Activo = producto.Activo,
+                CategoriaId = producto.CategoriaId,
+                CategoriaNombre = producto.Categoria.Nombre,
+                MarcaId = producto.MarcaId,
+                MarcaNombre = producto.Marca.Nombre,
+                Variantes = producto.Variantes.Select(v => new VarianteProductoDto
+                {
+                    Id = v.Id,
+                    Sku = v.Sku,
+                    Atributo = v.Atributo,
+                    Precio = v.Precio,
+                    Stock = v.Stock
+                }).ToList()
+            };
+
+            return Ok(resultado);
+        }
+
         [Authorize(Roles = "Admin")]
         [HttpPost]
-        // POST: api/Productos
         public async Task<ActionResult<ProductoDto>> Create(ProductoCreateDto dto)
         {
             var producto = new Producto
@@ -121,7 +166,6 @@ namespace TiendaPoniq.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpPut("{id}")]
-        // PUT: api/Productos/5
         public async Task<IActionResult> Update(int id, ProductoCreateDto dto)
         {
             var producto = await _unitOfWork.Productos.GetByIdAsync(id);
@@ -144,7 +188,6 @@ namespace TiendaPoniq.Api.Controllers
 
         [Authorize(Roles = "Admin")]
         [HttpDelete("{id}")]
-        // DELETE: api/Productos/5
         public async Task<IActionResult> Delete(int id)
         {
             var producto = await _unitOfWork.Productos.GetByIdAsync(id);
