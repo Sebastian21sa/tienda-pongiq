@@ -8,6 +8,8 @@ using TiendaPoniq.Infrastructure.Identity;
 using TiendaPoniq.Infrastructure.Persistence;
 using TiendaPoniq.Infrastructure.Persistence.Seed;
 using TiendaPoniq.Infrastructure.Repositories;
+using FluentValidation;
+using TiendaPoniq.Application.Validators;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +20,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped<ITokenService, TokenService>();
+builder.Services.AddValidatorsFromAssemblyContaining<ProductoCreateDtoValidator>();
 
 builder.Services.AddIdentity<ApplicationUser, IdentityRole>(options =>
 {

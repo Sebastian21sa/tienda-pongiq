@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TiendaPoniq.Application.DTOs;
 using TiendaPoniq.Application.Interfaces;
@@ -11,10 +12,12 @@ namespace TiendaPoniq.Api.Controllers
     public class CategoriasController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IValidator<CategoriaCreateDto> _validator;
 
-        public CategoriasController(IUnitOfWork unitOfWork)
+        public CategoriasController(IUnitOfWork unitOfWork, IValidator<CategoriaCreateDto> validator)
         {
             _unitOfWork = unitOfWork;
+            _validator = validator;
         }
 
         [HttpGet]
@@ -54,6 +57,12 @@ namespace TiendaPoniq.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<CategoriaDto>> Create(CategoriaCreateDto dto)
         {
+            var validacion = await _validator.ValidateAsync(dto);
+            if (!validacion.IsValid)
+            {
+                return BadRequest(validacion.Errors.Select(e => e.ErrorMessage));
+            }
+
             var categoria = new Categoria
             {
                 Nombre = dto.Nombre,
@@ -77,6 +86,12 @@ namespace TiendaPoniq.Api.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, CategoriaCreateDto dto)
         {
+            var validacion = await _validator.ValidateAsync(dto);
+            if (!validacion.IsValid)
+            {
+                return BadRequest(validacion.Errors.Select(e => e.ErrorMessage));
+            }
+
             var categoria = await _unitOfWork.Categorias.GetByIdAsync(id);
 
             if (categoria == null)

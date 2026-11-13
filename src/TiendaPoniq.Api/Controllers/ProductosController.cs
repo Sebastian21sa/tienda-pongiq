@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TiendaPoniq.Application.DTOs;
@@ -12,14 +13,15 @@ namespace TiendaPoniq.Api.Controllers
     public class ProductosController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IValidator<ProductoCreateDto> _validator;
 
-        public ProductosController(IUnitOfWork unitOfWork)
+        public ProductosController(IUnitOfWork unitOfWork, IValidator<ProductoCreateDto> validator)
         {
             _unitOfWork = unitOfWork;
+            _validator = validator;
         }
 
         [HttpGet]
-
         public async Task<ActionResult<PagedResultDto<ProductoDto>>> GetAll(
             [FromQuery] int pageNumber = 1,
             [FromQuery] int pageSize = 10,
@@ -137,6 +139,12 @@ namespace TiendaPoniq.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<ProductoDto>> Create(ProductoCreateDto dto)
         {
+            var validacion = await _validator.ValidateAsync(dto);
+            if (!validacion.IsValid)
+            {
+                return BadRequest(validacion.Errors.Select(e => e.ErrorMessage));
+            }
+
             var producto = new Producto
             {
                 Nombre = dto.Nombre,
@@ -168,6 +176,12 @@ namespace TiendaPoniq.Api.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, ProductoCreateDto dto)
         {
+            var validacion = await _validator.ValidateAsync(dto);
+            if (!validacion.IsValid)
+            {
+                return BadRequest(validacion.Errors.Select(e => e.ErrorMessage));
+            }
+
             var producto = await _unitOfWork.Productos.GetByIdAsync(id);
 
             if (producto == null)

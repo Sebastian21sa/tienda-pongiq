@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TiendaPoniq.Application.DTOs;
 using TiendaPoniq.Application.Interfaces;
@@ -11,10 +12,12 @@ namespace TiendaPoniq.Api.Controllers
     public class MarcasController : ControllerBase
     {
         private readonly IUnitOfWork _unitOfWork;
+        private readonly IValidator<MarcaCreateDto> _validator;
 
-        public MarcasController(IUnitOfWork unitOfWork)
+        public MarcasController(IUnitOfWork unitOfWork, IValidator<MarcaCreateDto> validator)
         {
             _unitOfWork = unitOfWork;
+            _validator = validator;
         }
 
         [HttpGet]
@@ -56,6 +59,12 @@ namespace TiendaPoniq.Api.Controllers
         [HttpPost]
         public async Task<ActionResult<MarcaDto>> Create(MarcaCreateDto dto)
         {
+            var validacion = await _validator.ValidateAsync(dto);
+            if (!validacion.IsValid)
+            {
+                return BadRequest(validacion.Errors.Select(e => e.ErrorMessage));
+            }
+
             var marca = new Marca
             {
                 Nombre = dto.Nombre,
@@ -80,6 +89,12 @@ namespace TiendaPoniq.Api.Controllers
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(int id, MarcaCreateDto dto)
         {
+            var validacion = await _validator.ValidateAsync(dto);
+            if (!validacion.IsValid)
+            {
+                return BadRequest(validacion.Errors.Select(e => e.ErrorMessage));
+            }
+
             var marca = await _unitOfWork.Marcas.GetByIdAsync(id);
 
             if (marca == null)
